@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --background: #f6f8fc;
+  --background: #ffffff;
   --foreground: #171b26;
   --muted: #718099;
   --line: #e5eaf2;
@@ -11,7 +11,7 @@
 }
 
 html {
-  background: var(--background);
+  background: #ffffff;
 }
 
 body {
@@ -31,7 +31,7 @@ select {
 }
 
 .app-shell {
-  background: var(--background);
+  background: #ffffff;
 }
 
 .tabular-nums {

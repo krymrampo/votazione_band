@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Song, MemberName, TabType } from '@/types';
 import { dataService } from '@/lib/dataService';
-import { calculateSongStats, getSongRankingScore } from '@/lib/utils';
+import { calculateSongStats } from '@/lib/utils';
 import { Header } from '@/components/Header';
 import { TabNav } from '@/components/TabNav';
-import { SearchBar, SortOption } from '@/components/SearchBar';
+import { SortOption } from '@/components/SearchBar';
 import { SongCard } from '@/components/SongCard';
 import { MemberSelectorModal } from '@/components/MemberSelectorModal';
 import { AddSongModal } from '@/components/AddSongModal';
@@ -175,9 +175,6 @@ export default function Home() {
 
     if (activeTab === 'unvoted') {
       list = unvotedSongsList;
-    } else if (activeTab === 'top') {
-      // Ordina per punteggio gradimento e votanti
-      list = [...songs].sort((a, b) => getSongRankingScore(b) - getSongRankingScore(a));
     } else {
       list = [...songs];
     }
@@ -192,23 +189,12 @@ export default function Home() {
       );
     }
 
-    // Ordinamento solo per tab "all"
-    if (activeTab === 'all') {
-      if (sortOption === 'recent') {
-        list.sort(
-          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-      } else if (sortOption === 'az') {
-        list.sort((a, b) => a.title.localeCompare(b.title));
-      } else if (sortOption === 'votes_count') {
-        list.sort((a, b) => (b.votes?.length || 0) - (a.votes?.length || 0));
-      } else if (sortOption === 'rating') {
-        list.sort((a, b) => {
-          const statsA = calculateSongStats(a);
-          const statsB = calculateSongStats(b);
-          return statsB.averageRating - statsA.averageRating;
-        });
-      }
+    if (sortOption === 'recent') {
+      list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    } else if (sortOption === 'az') {
+      list.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortOption === 'votes_count') {
+      list.sort((a, b) => (b.votes?.length || 0) - (a.votes?.length || 0));
     }
 
     return list;
@@ -229,14 +215,10 @@ export default function Home() {
         onChangeTab={setActiveTab}
         unvotedCount={unvotedSongsList.length}
         totalCount={songs.length}
-      />
-
-      <SearchBar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         sortOption={sortOption}
         onSortChange={setSortOption}
-        showSort={activeTab === 'all'}
       />
 
       <main className="mx-auto flex w-full max-w-[520px] flex-1 px-4 pb-4 pt-3">
@@ -255,7 +237,7 @@ export default function Home() {
                 onVote={handleVote}
                 onOpenDetails={(s) => setSelectedSongDetails(s)}
                 onDelete={handleDeleteSong}
-                rankIndex={activeTab === 'top' ? index + 1 : undefined}
+                rankIndex={undefined}
               />
             ))}
           </div>
@@ -271,7 +253,7 @@ export default function Home() {
                   Hai già espresso il tuo parere su tutti i pezzi disponibili.
                 </p>
                 <button
-                  onClick={() => setActiveTab('top')}
+                  onClick={() => setActiveTab('all')}
                   className="h-10 rounded-xl border border-[#dfe5ee] bg-[#f7f9fc] px-4 text-xs font-medium text-[#263044] active:scale-[0.98]"
                 >
                   Guarda la classifica

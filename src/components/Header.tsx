@@ -23,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   const memberInfo = BAND_MEMBERS.find((m) => m.name === currentMember);
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 px-4 pt-5 backdrop-blur-md">
+    <header className="sticky top-0 z-30 bg-white px-4 pb-1 pt-5">
       <div className="mx-auto flex max-w-[520px] items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#e5eaf2] bg-[#f3f6fb] text-[#1a2435] shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
@@ -72,7 +72,6 @@ export const Header: React.FC<HeaderProps> = ({
           <ChevronDown className="h-3.5 w-3.5 opacity-75" />
         </button>
       </div>
-      <div className="mx-auto mt-4 h-px max-w-[520px] bg-[#eef1f6]" />
     </header>
   );
 };
