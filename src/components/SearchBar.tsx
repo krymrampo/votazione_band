@@ -3,7 +3,7 @@
 import React from 'react';
 import { Search, X, SlidersHorizontal } from 'lucide-react';
 
-export type SortOption = 'recent' | 'az' | 'votes_count';
+export type SortOption = 'recent' | 'az' | 'votes_count' | 'highest_average';
 
 interface SearchBarProps {
   searchQuery: string;
@@ -49,6 +49,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             className="h-11 cursor-pointer appearance-none rounded-[14px] border border-[#dfe5ee] bg-[#f7f9fc] px-3.5 pr-9 text-[13px] font-medium text-[#38455b] outline-none transition focus:border-[#a7b8d5] focus:ring-4 focus:ring-[#dce8fc]"
           >
             <option value="recent">Recenti</option>
+            <option value="highest_average">Media più alta</option>
             <option value="votes_count">Votanti</option>
             <option value="az">A-Z</option>
           </select>

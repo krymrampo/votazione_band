@@ -195,6 +195,18 @@ export default function Home() {
       list.sort((a, b) => a.title.localeCompare(b.title));
     } else if (sortOption === 'votes_count') {
       list.sort((a, b) => (b.votes?.length || 0) - (a.votes?.length || 0));
+    } else if (sortOption === 'highest_average') {
+      const getAverage = (song: Song) => {
+        const votes = song.votes || [];
+        return votes.length === 0 ? 0 : votes.reduce((sum, vote) => sum + vote.rating, 0) / votes.length;
+      };
+
+      list.sort((a, b) => {
+        const averageDifference = getAverage(b) - getAverage(a);
+        if (averageDifference !== 0) return averageDifference;
+
+        return (b.votes?.length || 0) - (a.votes?.length || 0);
+      });
     }
 
     return list;

@@ -57,15 +57,22 @@ export const TabNav: React.FC<TabNavProps> = ({
           </button>
 
           <button
-            aria-label={isSearchOpen ? 'Chiudi ricerca' : 'Cerca brano o artista'}
-            title={isSearchOpen ? 'Chiudi ricerca' : 'Cerca brano o artista'}
+            aria-label={isSearchOpen ? 'Chiudi ricerca e filtri' : 'Cerca, filtra e ordina'}
+            title={isSearchOpen ? 'Chiudi ricerca e filtri' : 'Cerca, filtra e ordina'}
             onClick={() => {
               if (isSearchOpen) onSearchChange('');
               setIsSearchOpen((open) => !open);
             }}
             className={`flex h-10 w-11 shrink-0 items-center justify-center rounded-[14px] text-[#52617a] transition active:scale-[0.96] ${isSearchOpen || searchQuery ? 'bg-white text-[#192331] shadow-sm' : 'hover:bg-white hover:text-[#202a3a]'}`}
           >
-            {isSearchOpen ? <X className="h-4 w-4" strokeWidth={1.8} /> : <Search className="h-4 w-4" strokeWidth={1.8} />}
+            {isSearchOpen ? (
+              <X className="h-4 w-4" strokeWidth={1.8} />
+            ) : (
+              <span className="flex items-center gap-0.5" aria-hidden="true">
+                <Search className="h-4 w-4" strokeWidth={1.8} />
+                <SlidersHorizontal className="h-3 w-3" strokeWidth={1.8} />
+              </span>
+            )}
           </button>
         </div>
 
@@ -91,6 +98,7 @@ export const TabNav: React.FC<TabNavProps> = ({
                 className="h-10 w-[112px] cursor-pointer appearance-none rounded-[12px] border border-[#dfe5ee] bg-white px-3 pr-8 text-[12px] font-medium text-[#38455b] outline-none focus:border-[#a7b8d5] focus:ring-4 focus:ring-[#dce8fc]"
               >
                 <option value="recent">Recenti</option>
+                <option value="highest_average">Media più alta</option>
                 <option value="az">Alfabetico</option>
                 <option value="votes_count">Più voti</option>
               </select>
