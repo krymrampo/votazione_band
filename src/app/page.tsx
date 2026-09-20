@@ -6,12 +6,14 @@ import { dataService } from '@/lib/dataService';
 import { calculateSongStats } from '@/lib/utils';
 import { Header } from '@/components/Header';
 import { TabNav } from '@/components/TabNav';
-import { SortOption } from '@/components/SearchBar';
+import { MemberSortOption, SortOption } from '@/components/SearchBar';
 import { SongCard } from '@/components/SongCard';
 import { MemberSelectorModal } from '@/components/MemberSelectorModal';
+import { ViewedMemberSelectorModal } from '@/components/ViewedMemberSelectorModal';
 import { AddSongModal } from '@/components/AddSongModal';
 import { VotesBreakdownModal } from '@/components/VotesBreakdownModal';
-import { Plus, Sparkles, Music, CheckCircle2, Trophy, Loader2 } from 'lucide-react';
+import { BAND_MEMBERS } from '@/lib/constants';
+import { Plus, Sparkles, Music, CheckCircle2, Loader2, Users } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 const STORAGE_MEMBER_KEY = 'band_active_member_name';
@@ -22,8 +24,11 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('recent');
+  const [memberSortOption, setMemberSortOption] = useState<MemberSortOption>('rating_desc');
+  const [viewedMember, setViewedMember] = useState<MemberName | null>(null);
 
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+  const [isViewedMemberModalOpen, setIsViewedMemberModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedSongDetails, setSelectedSongDetails] = useState<Song | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,6 +63,13 @@ export default function Home() {
   const handleSelectMember = (member: MemberName) => {
     setCurrentMember(member);
     localStorage.setItem(STORAGE_MEMBER_KEY, member);
+  };
+
+  const handleChangeTab = (tab: TabType) => {
+    if (tab === 'by_member' && !viewedMember && currentMember) {
+      setViewedMember(currentMember);
+    }
+    setActiveTab(tab);
   };
 
   // Votazione istantanea con aggiornamento ottimistico
@@ -169,11 +181,31 @@ export default function Home() {
     };
   }, [songs, currentMember]);
 
+  const memberVoteCounts = useMemo(() => {
+    const counts = Object.fromEntries(
+      BAND_MEMBERS.map((member) => [member.name, 0])
+    ) as Record<MemberName, number>;
+
+    for (const song of songs) {
+      for (const vote of song.votes || []) {
+        counts[vote.member_name] += 1;
+      }
+    }
+
+    return counts;
+  }, [songs]);
+
   // Filtraggio e ordinamento lista visualizzata
   const displayedSongs = useMemo(() => {
     let list: Song[] = [];
 
-    if (activeTab === 'unvoted') {
+    if (activeTab === 'by_member') {
+      list = viewedMember
+        ? songs.filter((song) =>
+            song.votes?.some((vote) => vote.member_name === viewedMember)
+          )
+        : [];
+    } else if (activeTab === 'unvoted') {
       list = unvotedSongsList;
     } else {
       list = [...songs];
@@ -189,7 +221,25 @@ export default function Home() {
       );
     }
 
-    if (sortOption === 'recent') {
+    if (activeTab === 'by_member' && viewedMember) {
+      const getMemberRating = (song: Song) =>
+        song.votes?.find((vote) => vote.member_name === viewedMember)?.rating || 0;
+
+      if (memberSortOption === 'rating_desc' || memberSortOption === 'rating_asc') {
+        const direction = memberSortOption === 'rating_desc' ? -1 : 1;
+        list.sort((a, b) => {
+          const ratingDifference = (getMemberRating(a) - getMemberRating(b)) * direction;
+          return ratingDifference !== 0 ? ratingDifference : a.title.localeCompare(b.title);
+        });
+      } else if (memberSortOption === 'recent') {
+        list.sort((a, b) => {
+          const dateDifference = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          return dateDifference !== 0 ? dateDifference : a.title.localeCompare(b.title);
+        });
+      } else {
+        list.sort((a, b) => a.title.localeCompare(b.title));
+      }
+    } else if (sortOption === 'recent') {
       list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     } else if (sortOption === 'az') {
       list.sort((a, b) => a.title.localeCompare(b.title));
@@ -210,7 +260,7 @@ export default function Home() {
     }
 
     return list;
-  }, [songs, activeTab, unvotedSongsList, searchQuery, sortOption]);
+  }, [songs, activeTab, unvotedSongsList, searchQuery, sortOption, viewedMember, memberSortOption]);
 
   return (
     <div className="app-shell flex min-h-[100dvh] flex-col pb-24 text-[#171b26]">
@@ -224,13 +274,18 @@ export default function Home() {
 
       <TabNav
         activeTab={activeTab}
-        onChangeTab={setActiveTab}
+        onChangeTab={handleChangeTab}
         unvotedCount={unvotedSongsList.length}
         totalCount={songs.length}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         sortOption={sortOption}
         onSortChange={setSortOption}
+        memberSortOption={memberSortOption}
+        onMemberSortChange={setMemberSortOption}
+        viewedMember={viewedMember}
+        viewedMemberVoteCount={viewedMember ? memberVoteCounts[viewedMember] : 0}
+        onOpenViewedMemberSelect={() => setIsViewedMemberModalOpen(true)}
       />
 
       <main className="mx-auto flex w-full max-w-[520px] flex-1 px-4 pb-4 pt-3">
@@ -248,14 +303,51 @@ export default function Home() {
                 currentMember={currentMember}
                 onVote={handleVote}
                 onOpenDetails={(s) => setSelectedSongDetails(s)}
-                onDelete={handleDeleteSong}
+                onDelete={activeTab === 'by_member' ? undefined : handleDeleteSong}
                 rankIndex={undefined}
+                readOnlyMemberView={activeTab === 'by_member'}
+                viewedMember={viewedMember}
               />
             ))}
           </div>
         ) : (
           <div className="my-4 flex w-full flex-col items-center justify-center rounded-[18px] border border-[#e4e9f1] bg-white px-6 py-12 text-center shadow-[0_1px_2px_rgba(20,31,48,0.025)]">
-            {activeTab === 'unvoted' ? (
+            {activeTab === 'by_member' ? (
+              <>
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[#dfe5ee] bg-[#f3f6fb] text-[#52617a]">
+                  <Users className="h-6 w-6" />
+                </div>
+                <h3 className="mb-2 text-lg font-semibold text-[#171b26]">
+                  {searchQuery && viewedMember
+                    ? `Nessun risultato per ${viewedMember}`
+                    : viewedMember
+                    ? `${viewedMember} non ha ancora votato`
+                    : 'Seleziona un membro'}
+                </h3>
+                <p className="mb-5 max-w-xs text-sm text-[#718099]">
+                  {searchQuery && viewedMember
+                    ? `Nessun brano votato da ${viewedMember} corrisponde a “${searchQuery}”.`
+                    : viewedMember
+                    ? `${viewedMember} non ha ancora votato nessun brano.`
+                    : 'Scegli un componente per vedere tutti i brani che ha votato.'}
+                </p>
+                {searchQuery ? (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="h-10 rounded-xl border border-[#dfe5ee] bg-[#f7f9fc] px-4 text-xs font-medium text-[#263044] active:scale-[0.98]"
+                  >
+                    Cancella ricerca
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsViewedMemberModalOpen(true)}
+                    className="h-10 rounded-xl border border-[#dfe5ee] bg-[#f7f9fc] px-4 text-xs font-medium text-[#263044] active:scale-[0.98]"
+                  >
+                    Cambia membro
+                  </button>
+                )}
+              </>
+            ) : activeTab === 'unvoted' ? (
               <>
                 <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[#c8f1dd] bg-[#e9fbf2] text-[#248a4b]">
                   <CheckCircle2 className="h-7 w-7" />
@@ -327,6 +419,14 @@ export default function Home() {
         canClose={currentMember !== null}
       />
 
+      <ViewedMemberSelectorModal
+        isOpen={isViewedMemberModalOpen}
+        selectedMember={viewedMember}
+        voteCounts={memberVoteCounts}
+        onSelectMember={setViewedMember}
+        onClose={() => setIsViewedMemberModalOpen(false)}
+      />
+
       <AddSongModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -337,11 +437,15 @@ export default function Home() {
       <VotesBreakdownModal
         song={selectedSongDetails}
         onClose={() => setSelectedSongDetails(null)}
-        onVote={(rating) => {
-          if (selectedSongDetails) {
-            handleVote(selectedSongDetails.id, rating);
-          }
-        }}
+        onVote={
+          activeTab === 'by_member'
+            ? undefined
+            : (rating) => {
+                if (selectedSongDetails) {
+                  handleVote(selectedSongDetails.id, rating);
+                }
+              }
+        }
         currentMember={currentMember}
       />
     </div>

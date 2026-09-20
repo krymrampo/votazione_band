@@ -24,7 +24,7 @@ export interface Song {
   votes?: Vote[];
 }
 
-export type TabType = 'all' | 'unvoted';
+export type TabType = 'all' | 'unvoted' | 'by_member';
 
 export interface SongStats {
   averageRating: number;

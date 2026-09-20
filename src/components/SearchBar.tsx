@@ -4,6 +4,7 @@ import React from 'react';
 import { Search, X, SlidersHorizontal } from 'lucide-react';
 
 export type SortOption = 'recent' | 'az' | 'votes_count' | 'highest_average';
+export type MemberSortOption = 'rating_desc' | 'rating_asc' | 'recent' | 'az';
 
 interface SearchBarProps {
   searchQuery: string;

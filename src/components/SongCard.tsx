@@ -3,6 +3,7 @@
 import React from 'react';
 import { Song, MemberName } from '@/types';
 import { calculateSongStats } from '@/lib/utils';
+import { BAND_MEMBERS } from '@/lib/constants';
 import { StarRating } from './StarRating';
 import { Users, Star, Trash2, Info, CheckCircle2 } from 'lucide-react';
 
@@ -13,6 +14,8 @@ interface SongCardProps {
   onOpenDetails: (song: Song) => void;
   onDelete?: (songId: string) => void;
   rankIndex?: number;
+  readOnlyMemberView?: boolean;
+  viewedMember?: MemberName | null;
 }
 
 export const SongCard: React.FC<SongCardProps> = ({
@@ -22,9 +25,15 @@ export const SongCard: React.FC<SongCardProps> = ({
   onOpenDetails,
   onDelete,
   rankIndex,
+  readOnlyMemberView = false,
+  viewedMember,
 }) => {
   const stats = calculateSongStats(song, currentMember);
   const hasVoted = stats.userVote !== undefined;
+  const viewedMemberInfo = BAND_MEMBERS.find((member) => member.name === viewedMember);
+  const viewedMemberVote = viewedMember
+    ? song.votes?.find((vote) => vote.member_name === viewedMember)
+    : undefined;
 
   return (
     <article className="mb-2.5 rounded-[17px] border border-[#e4e9f1] bg-white px-3.5 py-3.5 shadow-[0_1px_2px_rgba(20,31,48,0.025)] transition hover:border-[#d8e0eb] hover:shadow-[0_4px_12px_rgba(33,49,73,0.045)]">
@@ -37,14 +46,25 @@ export const SongCard: React.FC<SongCardProps> = ({
               </span>
             )}
 
-            {currentMember && hasVoted && (
+            {readOnlyMemberView && viewedMember && viewedMemberVote && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#dfe5ee] bg-[#f7f9fc] py-0.5 pl-1 pr-2 text-[10px] font-medium text-[#38455b]">
+                <span
+                  className={`flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br ${viewedMemberInfo?.color || 'from-slate-400 to-slate-500'} text-[6px] font-bold text-white`}
+                >
+                  {viewedMember.substring(0, 2).toUpperCase()}
+                </span>
+                {viewedMember}
+              </span>
+            )}
+
+            {!readOnlyMemberView && currentMember && hasVoted && (
               <span className="inline-flex items-center gap-1 rounded-full border border-[#c8f1dd] bg-[#e9fbf2] px-2 py-0.5 text-[10px] font-medium text-[#248a4b]">
                 <CheckCircle2 className="h-3 w-3" strokeWidth={2} />
                 {stats.userVote}★
               </span>
             )}
 
-            {currentMember && !hasVoted && (
+            {!readOnlyMemberView && currentMember && !hasVoted && (
               <span className="rounded-full bg-[#eef2f8] px-2 py-0.5 text-[10px] font-medium text-[#5e6d84]">
                 Da votare
               </span>
@@ -71,14 +91,37 @@ export const SongCard: React.FC<SongCardProps> = ({
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <StarRating
-            currentRating={stats.userVote}
-            onRate={(rating) => onVote(song.id, rating)}
-            disabled={!currentMember}
-            size="sm"
-          />
-        </div>
+        {readOnlyMemberView && viewedMember && viewedMemberVote ? (
+          <div
+            className="flex min-w-0 items-center gap-2"
+            aria-label={`Voto di ${viewedMember}: ${viewedMemberVote.rating} su 4`}
+          >
+            <div className="flex items-center gap-1" aria-hidden="true">
+              {[1, 2, 3, 4].map((star) => (
+                <Star
+                  key={star}
+                  className={`h-[18px] w-[18px] ${
+                    star <= viewedMemberVote.rating
+                      ? 'fill-[#ffb21a] text-[#ffb21a]'
+                      : 'fill-[#d8dee8] text-[#d8dee8]'
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="text-[11px] font-semibold text-[#52617a] tabular-nums">
+              {viewedMemberVote.rating}/4
+            </span>
+          </div>
+        ) : (
+          <div className="min-w-0">
+            <StarRating
+              currentRating={stats.userVote}
+              onRate={(rating) => onVote(song.id, rating)}
+              disabled={!currentMember}
+              size="sm"
+            />
+          </div>
+        )}
 
         <div className="flex shrink-0 items-center gap-1">
           <button
