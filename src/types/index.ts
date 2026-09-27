@@ -32,3 +32,19 @@ export interface SongStats {
   percentage: number;
   userVote?: number;
 }
+
+export interface BandSetlist {
+  song_ids: string[];
+  revision: number;
+}
+
+export interface BandNote {
+  id: string;
+  title: string;
+  body: string;
+  song_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type BandNoteInput = Pick<BandNote, 'title' | 'body' | 'song_id'>;

@@ -26,7 +26,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -70,4 +71,19 @@ select {
 
 .animate-fadeIn {
   animation: fadeIn 0.15s ease-out forwards;
+}
+
+@layer components {
+  .workspace { @apply mx-auto w-full max-w-[680px] px-4 py-7 pb-20; }
+  .field { @apply w-full min-w-0 rounded-lg border border-[#dfe5ee] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#a7b8d5] focus:ring-2 focus:ring-[#dce8fc]; }
+  .button { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#dfe5ee] bg-white px-3 py-2 text-sm font-medium transition hover:bg-[#f3f5f7] disabled:cursor-not-allowed disabled:opacity-45; }
+  .button-primary { @apply button border-[#192331] bg-[#192331] text-white hover:bg-[#303e50]; }
+  .icon-button { @apply button h-10 w-10 shrink-0 p-0; }
+}
+
+:focus-visible { outline: 2px solid #3976be; outline-offset: 3px; }
+textarea, input, .note-body { user-select: text; }
+.workspace { overflow-wrap: anywhere; letter-spacing: 0; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

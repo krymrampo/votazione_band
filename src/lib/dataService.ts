@@ -1,6 +1,7 @@
 import { Song, Vote, MemberName } from '@/types';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { INITIAL_DEMO_SONGS } from './constants';
+import { workspaceData, cloudError, detachLocalSong } from './workspaceData';
 
 const LOCAL_STORAGE_KEY = 'band_songs_voting_data_v1';
 
@@ -26,10 +27,12 @@ const saveLocalSongs = (songs: Song[]) => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(songs));
   } catch (err) {
     console.error('Errore nel salvataggio locale:', err);
+    throw new Error('Salvataggio locale non riuscito. Controlla lo spazio disponibile nel browser.');
   }
 };
 
 export const dataService = {
+  ...workspaceData,
   isCloudConnected: isSupabaseConfigured,
 
   // Carica l'elenco completo dei brani con i rispettivi voti
@@ -44,8 +47,7 @@ export const dataService = {
         if (songsError) throw songsError;
         return (songsData as Song[]) || [];
       } catch (err) {
-        console.warn('Impossibile caricare da Supabase, uso fallback locale:', err);
-        return getLocalSongs();
+        throw cloudError(err as { message: string });
       }
     }
     return getLocalSongs();
@@ -85,7 +87,7 @@ export const dataService = {
 
         return { ...song, votes };
       } catch (err) {
-        console.warn('Errore aggiunta brano Supabase, salvo in locale:', err);
+        throw cloudError(err as { message: string });
       }
     }
 
@@ -105,6 +107,7 @@ export const dataService = {
         : []
     };
 
+    if (newSong.votes?.[0]) newSong.votes[0].song_id = newSong.id;
     const current = getLocalSongs();
     const updated = [newSong, ...current];
     saveLocalSongs(updated);
@@ -130,7 +133,7 @@ export const dataService = {
         if (error) throw error;
         return;
       } catch (err) {
-        console.warn('Errore voto Supabase, salvo in locale:', err);
+        throw cloudError(err as { message: string });
       }
     }
 
@@ -163,12 +166,13 @@ export const dataService = {
         if (error) throw error;
         return;
       } catch (err) {
-        console.warn('Errore eliminazione Supabase, elimino in locale:', err);
+        throw cloudError(err as { message: string });
       }
     }
 
     const current = getLocalSongs();
     const updated = current.filter(s => s.id !== songId);
+    await detachLocalSong(songId);
     saveLocalSongs(updated);
   }
 };

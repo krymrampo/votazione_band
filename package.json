@@ -2,9 +2,18 @@
   "name": "votazione-band-pezzi",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
+    "media:prepare": "node scripts/prepare-media.mjs",
+    "test": "tsx --test tests/*.test.ts",
+    "test:browser": "playwright test",
+    "predev": "npm run media:prepare",
     "dev": "next dev",
+    "prebuild": "npm run media:prepare",
     "build": "next build",
+    "postbuild": "node scripts/check-media-bundle.mjs",
     "start": "next start",
     "lint": "next lint"
   },
@@ -13,19 +22,23 @@
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "lucide-react": "^0.447.0",
-    "next": "14.2.15",
+    "next": "15.5.26",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwind-merge": "^2.5.2"
   },
+  "overrides": { "postcss": "$postcss" },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
+    "@playwright/test": "1.56.1",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20.16.10",
     "@types/react": "^18.3.10",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
+    "postcss": "8.5.28",
     "tailwindcss": "^3.4.13",
+    "tsx": "4.20.6",
     "typescript": "^5.6.2"
   }
 }
