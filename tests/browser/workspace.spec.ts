@@ -134,6 +134,32 @@ test('download result, filename and cancellation states', async ({ page }) => {
   await pending?.abort();
 });
 
+test('submits the YouTube link to YTMP3 in a new tab', async ({ page }) => {
+  await page.goto('/download-mp3');
+  await page.route('https://convertytmp3.org/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body: '<title>YTMP3 test</title>',
+    }),
+  );
+  await page
+    .getByLabel('Link YouTube')
+    .fill('https://www.youtube.com/watch?v=BaW_jenozKc');
+  const requestPromise = page.waitForRequest(
+    (request) =>
+      request.url() === 'https://convertytmp3.org/' &&
+      request.method() === 'POST',
+  );
+  const popupPromise = page.waitForEvent('popup');
+  await page.getByRole('button', { name: 'Converti con YTMP3' }).click();
+  const [request, popup] = await Promise.all([requestPromise, popupPromise]);
+  expect(request.postData()).toBe(
+    'link=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DBaW_jenozKc',
+  );
+  await expect(popup).toHaveURL('https://convertytmp3.org/');
+});
+
 test('all routes fit mobile and desktop without horizontal overflow', async ({
   page,
 }) => {

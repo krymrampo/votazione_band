@@ -1,7 +1,13 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { CheckCircle2, Download, Loader2, X } from 'lucide-react';
+import {
+  CheckCircle2,
+  Download,
+  ExternalLink,
+  Loader2,
+  X,
+} from 'lucide-react';
 import { ErrorNotice } from '@/components/WorkspaceUI';
 import { youtubeUrl } from '@/lib/mp3-input';
 
@@ -16,6 +22,8 @@ export default function DownloadPage() {
   } | null>(null);
   const active = useRef<AbortController | null>(null);
   const objectUrl = useRef<string | null>(null);
+  const ytmp3Form = useRef<HTMLFormElement>(null);
+  const ytmp3Link = useRef<HTMLInputElement>(null);
   function releaseFile() {
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
     objectUrl.current = null;
@@ -94,6 +102,20 @@ export default function DownloadPage() {
     }
   }
 
+  function submitToYtmp3() {
+    try {
+      const canonical = youtubeUrl(url);
+      if (!ytmp3Form.current || !ytmp3Link.current)
+        throw new Error('Modulo YTMP3 non disponibile.');
+      ytmp3Link.current.value = canonical;
+      ytmp3Form.current.requestSubmit();
+      setError('');
+      setStatus('Richiesta inviata a YTMP3 in una nuova scheda.');
+    } catch {
+      setError('Inserisci un link YouTube valido prima di inviarlo a YTMP3.');
+    }
+  }
+
   return (
     <main className="workspace">
       <header className="mb-8">
@@ -136,6 +158,27 @@ export default function DownloadPage() {
             </button>
           )}
         </div>
+        <div className="border-t border-[#e5eaf2] pt-4">
+          <p className="mb-3 text-sm text-[#617086]">
+            Invia il link direttamente al servizio esterno; la conversione e il
+            download si completano sul suo sito.
+          </p>
+          <button className="button" type="button" onClick={submitToYtmp3}>
+            <ExternalLink className="h-4 w-4" />
+            Converti con YTMP3
+          </button>
+        </div>
+      </form>
+      <form
+        ref={ytmp3Form}
+        action="https://convertytmp3.org/"
+        method="post"
+        target="_blank"
+        rel="noopener noreferrer"
+        hidden
+        aria-hidden="true"
+      >
+        <input ref={ytmp3Link} type="hidden" name="link" />
       </form>
       <div className="mt-5">
         <ErrorNotice message={error} />
