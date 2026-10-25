@@ -96,13 +96,15 @@ export default function NotesPage() {
   async function remove(id: string) {
     if (busy.current) return;
     busy.current = true;
+    const prevNotes = notes;
+    setNotes((current) => current.filter((note) => note.id !== id));
+    setDeleting(null);
     setSaving(true);
     setError('');
     try {
       await dataService.deleteNote(id);
-      setNotes((current) => current.filter((note) => note.id !== id));
-      setDeleting(null);
     } catch (err) {
+      setNotes(prevNotes);
       setError(errorMessage(err));
     } finally {
       busy.current = false;
@@ -249,13 +251,16 @@ export default function NotesPage() {
                 value={filter}
                 onChange={(event) => setFilter(event.target.value)}
               >
-                <option value="all">Tutte le note</option>
-                <option value="general">Note generali</option>
-                {songs.map((song) => (
-                  <option key={song.id} value={song.id}>
-                    {song.title}
-                  </option>
-                ))}
+                <option value="all">Tutte le note ({notes.length})</option>
+                <option value="general">Note generali ({notes.filter((n) => !n.song_id).length})</option>
+                {songs.map((song) => {
+                  const count = notes.filter((n) => n.song_id === song.id).length;
+                  return (
+                    <option key={song.id} value={song.id}>
+                      {song.title} {count > 0 ? `(${count})` : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
             <div className="space-y-3">
@@ -264,7 +269,7 @@ export default function NotesPage() {
                 return (
                   <article
                     key={note.id}
-                    className="rounded-lg border border-[#e5eaf2] p-4"
+                    className="rounded-[16px] border border-[#e4e9f1] bg-white p-4 shadow-[0_1px_2px_rgba(20,31,48,0.025)] transition hover:border-[#d8e0eb] hover:shadow-[0_4px_12px_rgba(33,49,73,0.045)]"
                   >
                     <div className="mb-3 flex items-start gap-2">
                       <div className="min-w-0 flex-1">

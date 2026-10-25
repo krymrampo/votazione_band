@@ -64,15 +64,15 @@ export const VotesBreakdownModal: React.FC<VotesBreakdownModalProps> = ({
             </div>
           </div>
           <div>
-            <span className="text-[10px] text-slate-400 block font-medium">Consenso</span>
+            <span className="text-[10px] text-[#718099] block font-medium">Consenso</span>
             <div className="flex items-center justify-center gap-1 mt-0.5">
               <span
                 className={`text-lg font-semibold tabular-nums ${
                   stats.percentage >= 75
-                    ? 'text-emerald-400'
+                    ? 'text-[#248a4b]'
                     : stats.percentage >= 50
-                    ? 'text-amber-400'
-                    : 'text-slate-400'
+                    ? 'text-[#a86b00]'
+                    : 'text-[#718099]'
                 }`}
               >
                 {stats.totalVotes > 0 ? `${stats.percentage}%` : '-'}
@@ -132,7 +132,7 @@ export const VotesBreakdownModal: React.FC<VotesBreakdownModalProps> = ({
                           className={`w-3.5 h-3.5 ${
                             star <= memberVote.rating
                               ? 'fill-[#ffb21a] text-[#ffb21a]'
-                              : 'text-[#c4ccda]'
+                              : 'fill-[#e2e8f0] text-[#e2e8f0]'
                           }`}
                         />
                       ))}

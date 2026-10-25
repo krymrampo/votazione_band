@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS votes (
     UNIQUE(song_id, member_name)
 );
 
+-- Indice per ordinamento veloce dei brani per data di creazione
+CREATE INDEX IF NOT EXISTS songs_created_at_idx ON songs(created_at DESC);
+
 -- 3. Abilitazione Row Level Security (RLS) aperta in lettura/scrittura per la band (anon)
 ALTER TABLE songs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE votes ENABLE ROW LEVEL SECURITY;

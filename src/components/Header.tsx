@@ -23,7 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   const memberInfo = BAND_MEMBERS.find((m) => m.name === currentMember);
 
   return (
-    <header className="sticky top-0 z-30 bg-white px-4 pb-1 pt-5">
+    <header className="bg-white px-4 pb-1 pt-4 sm:pt-5">
       <div className="mx-auto flex max-w-[520px] items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#e5eaf2] bg-[#f3f6fb] text-[#1a2435] shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">

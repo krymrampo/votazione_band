@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.band_notes (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS band_notes_song_id_idx ON public.band_notes(song_id);
+CREATE INDEX IF NOT EXISTS band_notes_updated_at_idx ON public.band_notes(updated_at DESC);
 
 ALTER TABLE public.band_setlist ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.band_notes ENABLE ROW LEVEL SECURITY;

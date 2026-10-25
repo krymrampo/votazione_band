@@ -4,6 +4,8 @@ import { INITIAL_DEMO_SONGS } from './constants';
 import { workspaceData, cloudError, detachLocalSong } from './workspaceData';
 
 const LOCAL_STORAGE_KEY = 'band_songs_voting_data_v1';
+const CACHE_TTL_MS = 15000;
+let memoryCache: { songs: Song[]; timestamp: number } | null = null;
 
 // Helper per leggere lo storage locale
 const getLocalSongs = (): Song[] => {
@@ -36,7 +38,11 @@ export const dataService = {
   isCloudConnected: isSupabaseConfigured,
 
   // Carica l'elenco completo dei brani con i rispettivi voti
-  async getSongs(): Promise<Song[]> {
+  async getSongs(forceRefresh = false): Promise<Song[]> {
+    if (!forceRefresh && memoryCache && Date.now() - memoryCache.timestamp < CACHE_TTL_MS) {
+      return memoryCache.songs;
+    }
+
     if (isSupabaseConfigured && supabase) {
       try {
         const { data: songsData, error: songsError } = await supabase
@@ -45,12 +51,21 @@ export const dataService = {
           .order('created_at', { ascending: false });
 
         if (songsError) throw songsError;
-        return (songsData as Song[]) || [];
+        const songs = (songsData as Song[]) || [];
+        memoryCache = { songs, timestamp: Date.now() };
+        return songs;
       } catch (err) {
         throw cloudError(err as { message: string });
       }
     }
-    return getLocalSongs();
+    const songs = getLocalSongs();
+    memoryCache = { songs, timestamp: Date.now() };
+    return songs;
+  },
+
+  // Invalida la cache in memoria
+  invalidateCache() {
+    memoryCache = null;
   },
 
   // Aggiunge un nuovo brano (Anonimo per quanto riguarda l'autore)
@@ -85,7 +100,11 @@ export const dataService = {
           }
         }
 
-        return { ...song, votes };
+        const fullSong: Song = { ...song, votes };
+        if (memoryCache) {
+          memoryCache = { songs: [fullSong, ...memoryCache.songs], timestamp: Date.now() };
+        }
+        return fullSong;
       } catch (err) {
         throw cloudError(err as { message: string });
       }
@@ -111,6 +130,9 @@ export const dataService = {
     const current = getLocalSongs();
     const updated = [newSong, ...current];
     saveLocalSongs(updated);
+    if (memoryCache) {
+      memoryCache = { songs: updated, timestamp: Date.now() };
+    }
     return newSong;
   },
 
@@ -131,6 +153,27 @@ export const dataService = {
           );
 
         if (error) throw error;
+        if (memoryCache) {
+          memoryCache = {
+            songs: memoryCache.songs.map((s) => {
+              if (s.id !== songId) return s;
+              const votes = s.votes ? [...s.votes] : [];
+              const idx = votes.findIndex((v) => v.member_name === memberName);
+              if (idx >= 0) {
+                votes[idx] = { ...votes[idx], rating, updated_at: new Date().toISOString() };
+              } else {
+                votes.push({
+                  song_id: songId,
+                  member_name: memberName,
+                  rating,
+                  updated_at: new Date().toISOString(),
+                });
+              }
+              return { ...s, votes };
+            }),
+            timestamp: Date.now(),
+          };
+        }
         return;
       } catch (err) {
         throw cloudError(err as { message: string });
@@ -156,6 +199,9 @@ export const dataService = {
       return { ...s, votes };
     });
     saveLocalSongs(updated);
+    if (memoryCache) {
+      memoryCache = { songs: updated, timestamp: Date.now() };
+    }
   },
 
   // Elimina un brano (utile per pulizia)
@@ -164,6 +210,12 @@ export const dataService = {
       try {
         const { error } = await supabase.from('songs').delete().eq('id', songId);
         if (error) throw error;
+        if (memoryCache) {
+          memoryCache = {
+            songs: memoryCache.songs.filter((s) => s.id !== songId),
+            timestamp: Date.now(),
+          };
+        }
         return;
       } catch (err) {
         throw cloudError(err as { message: string });
@@ -174,5 +226,11 @@ export const dataService = {
     const updated = current.filter(s => s.id !== songId);
     await detachLocalSong(songId);
     saveLocalSongs(updated);
+    if (memoryCache) {
+      memoryCache = {
+        songs: updated,
+        timestamp: Date.now(),
+      };
+    }
   }
 };

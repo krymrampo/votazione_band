@@ -23,10 +23,16 @@ export const StarRating: React.FC<StarRatingProps> = ({
     lg: 'h-8 w-8',
   };
 
+  const buttonSizeClasses = {
+    sm: 'h-9 w-9 sm:h-10 sm:w-10 rounded-[9px]',
+    md: 'h-10 w-10 sm:h-11 sm:w-11 rounded-[10px]',
+    lg: 'h-11 w-11 sm:h-12 sm:w-12 rounded-[12px]',
+  };
+
   const starValues = [1, 2, 3, 4];
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className={`flex items-center ${size === 'sm' ? 'gap-1 sm:gap-1.5' : 'gap-1.5'}`}>
       {starValues.map((star) => {
         const isFilled = currentRating >= star;
         const info = STAR_RATINGS.find((r) => r.stars === star);
@@ -43,7 +49,7 @@ export const StarRating: React.FC<StarRatingProps> = ({
             title={info?.label}
             aria-label={`Vota ${star} stelle: ${info?.label}`}
             aria-pressed={isFilled}
-            className={`group flex h-10 w-10 items-center justify-center rounded-[10px] transition-all duration-150 active:scale-[0.94] sm:h-11 sm:w-11 ${
+            className={`group flex ${buttonSizeClasses[size]} items-center justify-center transition-all duration-150 active:scale-[0.94] ${
               isFilled
                 ? 'bg-[#fff4dd] text-[#ffb21a] hover:bg-[#ffedc7]'
                 : 'bg-[#f4f6fa] text-[#8c9aaf] hover:bg-[#eaf0f7] hover:text-[#718099]'

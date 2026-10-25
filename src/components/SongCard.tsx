@@ -133,8 +133,11 @@ export const SongCard: React.FC<SongCardProps> = ({
           </button>
 
           <button
-            title="Voti totali"
-            className="inline-flex h-9 items-center gap-1 rounded-xl border border-[#e4e9f1] bg-white px-2.5 text-[12px] text-[#52617a] tabular-nums"
+            type="button"
+            onClick={() => onOpenDetails(song)}
+            title="Vedi voti dei componenti"
+            aria-label={`Voti ricevuti: ${stats.totalVotes}. Clicca per vedere i dettagli.`}
+            className="inline-flex h-9 items-center gap-1 rounded-xl border border-[#e4e9f1] bg-white px-2.5 text-[12px] text-[#52617a] tabular-nums transition hover:bg-[#f1f4f8] hover:text-[#202a3a] active:scale-[0.96]"
           >
             <Users className="h-3.5 w-3.5" strokeWidth={1.8} />
             {stats.totalVotes}

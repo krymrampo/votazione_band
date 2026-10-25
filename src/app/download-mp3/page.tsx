@@ -1,19 +1,14 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import {
-  CheckCircle2,
-  Download,
-  ExternalLink,
-  Loader2,
-  X,
-} from 'lucide-react';
+import { CheckCircle2, Download, Loader2, X } from 'lucide-react';
 import { ErrorNotice } from '@/components/WorkspaceUI';
 import { youtubeUrl } from '@/lib/mp3-input';
 
 export default function DownloadPage() {
   const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
   const [result, setResult] = useState<{
@@ -22,8 +17,6 @@ export default function DownloadPage() {
   } | null>(null);
   const active = useRef<AbortController | null>(null);
   const objectUrl = useRef<string | null>(null);
-  const ytmp3Form = useRef<HTMLFormElement>(null);
-  const ytmp3Link = useRef<HTMLInputElement>(null);
   function releaseFile() {
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
     objectUrl.current = null;
@@ -36,6 +29,17 @@ export default function DownloadPage() {
     [],
   );
 
+  useEffect(() => {
+    if (!busy) {
+      setElapsedSeconds(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setElapsedSeconds((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [busy]);
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (active.current) return;
@@ -43,7 +47,7 @@ export default function DownloadPage() {
     setStatus('');
     let canonical;
     try {
-      canonical = youtubeUrl(url);
+      canonical = youtubeUrl(url.trim());
     } catch (err) {
       setError((err as Error).message);
       return;
@@ -102,20 +106,6 @@ export default function DownloadPage() {
     }
   }
 
-  function submitToYtmp3() {
-    try {
-      const canonical = youtubeUrl(url);
-      if (!ytmp3Form.current || !ytmp3Link.current)
-        throw new Error('Modulo YTMP3 non disponibile.');
-      ytmp3Link.current.value = canonical;
-      ytmp3Form.current.requestSubmit();
-      setError('');
-      setStatus('Richiesta inviata a YTMP3 in una nuova scheda.');
-    } catch {
-      setError('Inserisci un link YouTube valido prima di inviarlo a YTMP3.');
-    }
-  }
-
   return (
     <main className="workspace">
       <header className="mb-8">
@@ -127,16 +117,28 @@ export default function DownloadPage() {
       <form onSubmit={submit} className="space-y-4">
         <label className="block text-sm font-medium">
           Link YouTube
-          <input
-            required
-            type="url"
-            className="field mt-2"
-            placeholder="https://www.youtube.com/watch?v=..."
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            disabled={busy}
-            autoComplete="off"
-          />
+          <div className="relative mt-2">
+            <input
+              required
+              type="url"
+              className="field pr-9"
+              placeholder="https://www.youtube.com/watch?v=..."
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              disabled={busy}
+              autoComplete="off"
+            />
+            {url && !busy && (
+              <button
+                type="button"
+                onClick={() => setUrl('')}
+                aria-label="Cancella link"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 text-[#718099] hover:bg-[#e9eef6] hover:text-[#263044]"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </label>
         <div className="flex flex-wrap gap-2">
           <button className="button-primary" disabled={busy || !url.trim()}>
@@ -158,33 +160,12 @@ export default function DownloadPage() {
             </button>
           )}
         </div>
-        <div className="border-t border-[#e5eaf2] pt-4">
-          <p className="mb-3 text-sm text-[#617086]">
-            Invia il link direttamente al servizio esterno; la conversione e il
-            download si completano sul suo sito.
-          </p>
-          <button className="button" type="button" onClick={submitToYtmp3}>
-            <ExternalLink className="h-4 w-4" />
-            Converti con YTMP3
-          </button>
-        </div>
-      </form>
-      <form
-        ref={ytmp3Form}
-        action="https://convertytmp3.org/"
-        method="post"
-        target="_blank"
-        rel="noopener noreferrer"
-        hidden
-        aria-hidden="true"
-      >
-        <input ref={ytmp3Link} type="hidden" name="link" />
       </form>
       <div className="mt-5">
         <ErrorNotice message={error} />
       </div>
       <p role="status" className="text-sm text-[#617086]">
-        {busy ? 'Download e conversione in corso...' : status}
+        {busy ? `Download e conversione in corso... (${elapsedSeconds}s)` : status}
       </p>
       {result && (
         <section className="mt-8 border-y border-[#e5eaf2] py-6">

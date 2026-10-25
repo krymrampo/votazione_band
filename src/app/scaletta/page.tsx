@@ -64,9 +64,13 @@ export default function SetlistPage() {
     busy.current = true;
     setSaving(true);
     setError('');
+    const prevSetlist = setlist;
+    // Aggiornamento ottimistico immediato per feedback istantaneo
+    setSetlist({ ...setlist, song_ids: nextIds });
     try {
       setSetlist(await dataService.saveSetlist(nextIds, setlist.revision));
     } catch (err) {
+      setSetlist(prevSetlist);
       setError(errorMessage(err));
       setConflict(err instanceof SetlistConflictError);
     } finally {
@@ -102,7 +106,10 @@ export default function SetlistPage() {
               className="mb-2 flex justify-between gap-3 text-xs text-[#617086]"
               aria-live="polite"
             >
-              <span>{ids.length} brani</span>
+              <span>
+                {ids.length} {ids.length === 1 ? 'brano' : 'brani'}
+                {ids.length > 0 ? ` · ~${Math.round(ids.length * 3.5)} min live` : ''}
+              </span>
               <span>
                 {saving
                   ? 'Salvataggio...'
@@ -164,14 +171,26 @@ export default function SetlistPage() {
             )}
             <section className="mt-8">
               <h2 className="mb-3 text-base font-semibold">Aggiungi brani</h2>
-              <input
-                className="field mb-3"
-                type="search"
-                aria-label="Cerca brani da aggiungere"
-                placeholder="Titolo o artista"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
+              <div className="relative mb-3">
+                <input
+                  className="field pr-9"
+                  type="search"
+                  aria-label="Cerca brani da aggiungere"
+                  placeholder="Titolo o artista"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => setQuery('')}
+                    aria-label="Cancella ricerca"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 text-[#718099] hover:bg-[#e9eef6] hover:text-[#263044]"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
               {available.map((song) => (
                 <div
                   key={song.id}

@@ -21,10 +21,14 @@ modello di accesso condiviso senza account gia usato dalla band.
 - Node.js **22.x**, installazione `npm ci`, build `npm run build`.
 - Next.js 15.5.26, React 18; PostCSS aggiornato tramite override delle dipendenze.
 - Attivare **Fluid Compute** nelle impostazioni Vercel. La route MP3 richiede
-  `maxDuration = 300`; download e conversione hanno un timeout interno di 240 s.
+  `maxDuration = 300` e inoltra il download al servizio Docker `converter-api`.
+- Deployare `converter-api` su Railway usando la cartella `/converter-api` come
+  Root Directory. Impostare `CONVERTER_API_KEY` su Railway e le variabili
+  `MP3_BACKEND_URL` e `MP3_BACKEND_API_KEY` su Vercel Production. Le istruzioni
+  sono in [converter-api/README.md](converter-api/README.md).
 - Configurare `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` anche
   nell'ambiente Preview per verificare le pagine condivise.
-- Non servono worker esterni, bucket, token YouTube o nuove chiavi per gli MP3.
+- La chiave del servizio resta in Vercel e non viene inviata al browser.
 - `prebuild` scarica i binari della piattaforma e verifica SHA-256 fissati nel
   repository. Sono disponibili Linux x64 e macOS arm64/x64; servono accesso a
   GitHub Releases in build e permessi di esecuzione sul server.
@@ -46,12 +50,9 @@ In caso di successo risponde con `audio/mpeg`, `Content-Disposition` e streaming
 gli errori precedenti allo streaming sono JSON `{ error, code, requestId }`.
 I log `[mp3]` e l'header `X-Request-Id` permettono di individuare la richiesta.
 
-Sono supportati singoli video pubblici/non in elenco, massimo 10 minuti e 50 MiB
-di sorgente, convertiti a 192 kbps. Playlist, dirette e contenuti autenticati
-vengono respinti. I temporanei sono univoci e rimossi al completamento, errore o
-annullamento gestito. Un arresto forzato della piattaforma puo saltare la pulizia;
-`/tmp` non viene usata come storage persistente. Una conversione per istanza
-limita CPU e spazio: non e un limite globale fra istanze Vercel.
+Sono supportati singoli video YouTube, massimo 10 minuti e 50 MiB di MP3
+risultante. Playlist e dirette vengono respinte. Il servizio Docker gestisce una
+conversione alla volta e non conserva i file convertiti.
 
 Il client conserva il risultato solo in memoria fino a cambio pagina o nuova
 conversione. Non esiste un secondo endpoint che presupponga la presenza dello

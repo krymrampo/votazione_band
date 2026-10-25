@@ -43,7 +43,7 @@ export const TabNav: React.FC<TabNavProps> = ({
   const inactiveClass = 'text-[#52617a] hover:bg-white hover:text-[#202a3a]';
 
   return (
-    <div className="sticky top-[92px] z-20 bg-white px-4 pb-3 pt-1">
+    <div className="bg-white px-4 pb-3 pt-1">
       <div className="mx-auto max-w-[520px] rounded-[18px] border border-[#dfe5ee] bg-[#f7f9fc] p-1 shadow-[0_3px_10px_rgba(39,52,74,0.05)]">
         <div className="flex items-center gap-1">
           <button

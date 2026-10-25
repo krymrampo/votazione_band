@@ -78,7 +78,7 @@ export default function VotingPage() {
     setActiveTab(tab);
   };
 
-  // Confirm persistence before displaying the vote as saved.
+  // Voto ottimistico con feedback immediato e rollback in caso di errore
   const handleVote = useCallback(
     async (songId: string, rating: number) => {
       if (!currentMember) {
@@ -86,15 +86,12 @@ export default function VotingPage() {
         return;
       }
 
-      if (votePending.current) return;
-      votePending.current = true;
-      setSavingVote(true); setError('');
-      try { await dataService.setVote(songId, currentMember, rating); }
-      catch (err) { setError(errorMessage(err)); return; }
-      finally { votePending.current = false; setSavingVote(false); }
+      let previousSongs: Song[] = [];
+      let previousDetails: Song | null = null;
 
-      // Aggiornamento ottimistico dell'interfaccia
+      // Aggiornamento ottimistico immediato dell'interfaccia
       setSongs((prevSongs) => {
+        previousSongs = prevSongs;
         const updated = prevSongs.map((s) => {
           if (s.id !== songId) return s;
           const votes = s.votes ? [...s.votes] : [];
@@ -135,6 +132,7 @@ export default function VotingPage() {
       // Aggiorna anche eventuale modal dettagli aperto
       if (selectedSongDetails && selectedSongDetails.id === songId) {
         setSelectedSongDetails((prev) => {
+          previousDetails = prev;
           if (!prev) return null;
           const votes = prev.votes ? [...prev.votes] : [];
           const idx = votes.findIndex((v) => v.member_name === currentMember);
@@ -151,6 +149,17 @@ export default function VotingPage() {
         });
       }
 
+      setSavingVote(true);
+      setError('');
+      try {
+        await dataService.setVote(songId, currentMember, rating);
+      } catch (err) {
+        if (previousSongs.length > 0) setSongs(previousSongs);
+        if (previousDetails) setSelectedSongDetails(previousDetails);
+        setError(errorMessage(err));
+      } finally {
+        setSavingVote(false);
+      }
     },
     [currentMember, selectedSongDetails]
   );
@@ -275,29 +284,31 @@ export default function VotingPage() {
 
   return (
     <div className="app-shell flex min-h-[100dvh] flex-col pb-24 text-[#171b26]">
-      <Header
-        currentMember={currentMember}
-        onOpenMemberSelect={() => setIsMemberModalOpen(true)}
-        isCloud={dataService.isCloudConnected}
-        totalSongs={songs.length}
-        userVotedCount={userVotedCount}
-      />
+      <div className="sticky top-0 z-20 bg-white">
+        <Header
+          currentMember={currentMember}
+          onOpenMemberSelect={() => setIsMemberModalOpen(true)}
+          isCloud={dataService.isCloudConnected}
+          totalSongs={songs.length}
+          userVotedCount={userVotedCount}
+        />
 
-      <TabNav
-        activeTab={activeTab}
-        onChangeTab={handleChangeTab}
-        unvotedCount={unvotedSongsList.length}
-        totalCount={songs.length}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        sortOption={sortOption}
-        onSortChange={setSortOption}
-        memberSortOption={memberSortOption}
-        onMemberSortChange={setMemberSortOption}
-        viewedMember={viewedMember}
-        viewedMemberVoteCount={viewedMember ? memberVoteCounts[viewedMember] : 0}
-        onOpenViewedMemberSelect={() => setIsViewedMemberModalOpen(true)}
-      />
+        <TabNav
+          activeTab={activeTab}
+          onChangeTab={handleChangeTab}
+          unvotedCount={unvotedSongsList.length}
+          totalCount={songs.length}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          sortOption={sortOption}
+          onSortChange={setSortOption}
+          memberSortOption={memberSortOption}
+          onMemberSortChange={setMemberSortOption}
+          viewedMember={viewedMember}
+          viewedMemberVoteCount={viewedMember ? memberVoteCounts[viewedMember] : 0}
+          onOpenViewedMemberSelect={() => setIsViewedMemberModalOpen(true)}
+        />
+      </div>
 
       <div className="mx-auto w-full max-w-[520px] px-4">
         <ErrorNotice message={error} retry={() => setReload(value => value + 1)} />
@@ -319,7 +330,11 @@ export default function VotingPage() {
                 onVote={handleVote}
                 onOpenDetails={(s) => setSelectedSongDetails(s)}
                 onDelete={activeTab === 'by_member' ? undefined : handleDeleteSong}
-                rankIndex={undefined}
+                rankIndex={
+                  sortOption === 'highest_average' && activeTab === 'all' && !searchQuery.trim()
+                    ? index + 1
+                    : undefined
+                }
                 readOnlyMemberView={activeTab === 'by_member'}
                 viewedMember={viewedMember}
               />
@@ -372,7 +387,10 @@ export default function VotingPage() {
                   Hai già espresso il tuo parere su tutti i pezzi disponibili.
                 </p>
                 <button
-                  onClick={() => setActiveTab('all')}
+                  onClick={() => {
+                    setSortOption('highest_average');
+                    setActiveTab('all');
+                  }}
                   className="h-10 rounded-xl border border-[#dfe5ee] bg-[#f7f9fc] px-4 text-xs font-medium text-[#263044] active:scale-[0.98]"
                 >
                   Guarda la classifica

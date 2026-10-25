@@ -8,6 +8,118 @@ export const runtime = 'nodejs';
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
+async function proxyToConverter(url: string, request: Request, requestId: string) {
+  const serviceUrl = process.env.MP3_BACKEND_URL;
+  const apiKey = process.env.MP3_BACKEND_API_KEY;
+  if (!serviceUrl || !apiKey)
+    throw new Mp3Error(
+      'BACKEND_NOT_CONFIGURED',
+      'Il servizio MP3 non è configurato.',
+      503,
+    );
+
+  let endpoint: URL;
+  try {
+    endpoint = new URL('/download', serviceUrl);
+    if (
+      endpoint.protocol !== 'https:' &&
+      endpoint.hostname !== 'localhost' &&
+      endpoint.hostname !== '127.0.0.1'
+    ) {
+      throw new Error('HTTPS required');
+    }
+  } catch {
+    throw new Mp3Error('BACKEND_CONFIG', 'URL del servizio MP3 non valido.', 503);
+  }
+
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, 240000);
+  const abort = () => controller.abort();
+  request.signal.addEventListener('abort', abort, { once: true });
+  const cleanup = () => {
+    clearTimeout(timeout);
+    request.signal.removeEventListener('abort', abort);
+  };
+
+  try {
+    const upstream = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+      cache: 'no-store',
+      redirect: 'manual',
+      signal: controller.signal,
+    });
+
+    if (!upstream.ok || !upstream.body) {
+      const body = await upstream.json().catch(() => null);
+      cleanup();
+      throw new Mp3Error(
+        'CONVERTER_ERROR',
+        body?.error || 'Il servizio di conversione non ha completato il file.',
+        upstream.status >= 400 && upstream.status < 500 ? upstream.status : 502,
+      );
+    }
+
+    const reader = upstream.body.getReader();
+    let finished = false;
+    async function finish() {
+      if (finished) return;
+      finished = true;
+      cleanup();
+    }
+    const stream = new ReadableStream<Uint8Array>({
+      async pull(target) {
+        try {
+          const { done, value } = await reader.read();
+          if (done) {
+            target.close();
+            await finish();
+          } else target.enqueue(value);
+        } catch (error) {
+          await finish();
+          if (!target.desiredSize) return;
+          target.error(error);
+        }
+      },
+      async cancel() {
+        controller.abort();
+        await reader.cancel().catch(() => undefined);
+        await finish();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'audio/mpeg',
+        'Content-Disposition':
+          upstream.headers.get('content-disposition') ||
+          'attachment; filename="audio.mp3"',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Request-Id': requestId,
+      },
+    });
+  } catch (error) {
+    cleanup();
+    if (error instanceof Mp3Error) throw error;
+    throw new Mp3Error(
+      timedOut ? 'TIMEOUT' : 'BACKEND_UNAVAILABLE',
+      timedOut
+        ? 'La conversione ha superato il tempo disponibile.'
+        : 'Il servizio di conversione non è raggiungibile.',
+      timedOut ? 504 : 502,
+    );
+  }
+}
+
 export async function POST(request: Request) {
   const requestId = randomUUID();
   const started = Date.now();
@@ -38,6 +150,9 @@ export async function POST(request: Request) {
       throw new Mp3Error('INVALID_URL', 'Richiesta non valida.', 400);
     }
     const url = youtubeUrl(body?.url);
+    if (process.env.MP3_BACKEND_URL || process.env.VERCEL)
+      return await proxyToConverter(url, request, requestId);
+
     const result = await convertToMp3(url, request.signal, requestId);
     const file = createReadStream(result.path);
     const reader = (
